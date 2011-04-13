@@ -1,0 +1,46 @@
+#!/usr/bin/python
+
+import select
+import socket
+import threading
+import time 
+import os
+
+sock_paths = [ "/tmp/select_socket_1", "/tmp/select_socket_2" ]
+
+def reader():
+    l = []
+    for p in sock_paths:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.bind(p)
+        s.listen(5)
+        l.append(s)
+    (r, w, x) = select.select(l, [], [])
+    for f in r:
+        x = f.accept()[0]
+        print "recv: %s" % (x.recv(1024))
+
+
+def writer():
+    time.sleep(0.1)
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(sock_paths[0])
+    s.send("hello")
+
+def main():
+    for p in sock_paths:
+        try:
+            os.remove(p)
+        except:
+            pass
+        
+    t1 = threading.Thread(target=reader)
+    t2 = threading.Thread(target=writer)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+if __name__=="__main__":
+    main()
+
